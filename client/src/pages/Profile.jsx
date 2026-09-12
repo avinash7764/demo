@@ -61,6 +61,10 @@ export default function Profile() {
         <div className="card stat-card"><div className="val">{stats?.enrolled ?? 0}</div><div className="label">Courses enrolled</div></div>
         <div className="card stat-card"><div className="val">{stats?.completed ?? 0}</div><div className="label">Courses completed</div></div>
         <div className="card stat-card"><div className="val">{stats?.lessonsDone ?? 0}</div><div className="label">Lessons completed</div></div>
+        <div className="card stat-card">
+          <div className="val">{stats?.minutesWatched != null ? (stats.minutesWatched >= 60 ? `${Math.floor(stats.minutesWatched / 60)}h ${stats.minutesWatched % 60}m` : `${stats.minutesWatched}m`) : '0m'}</div>
+          <div className="label">Minutes watched</div>
+        </div>
       </div>
 
       <div className="profile-grid">

@@ -100,6 +100,16 @@ export default function AdminCourseEditor() {
   const [editingModuleId, setEditingModuleId] = useState(null);
   const [moduleTitleDraft, setModuleTitleDraft] = useState('');
   const [quizForLesson, setQuizForLesson] = useState(null); // lesson object
+  const [quizStats, setQuizStats] = useState([]);
+  const [showQuizStats, setShowQuizStats] = useState(false);
+
+  useEffect(() => {
+    if (!editing) return;
+    api(`/admin/courses/${id}/quiz-stats`)
+      .then((d) => setQuizStats(d.quizzes))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, quizForLesson]);
 
   const saveBtnRef = useRef(null);
 
@@ -259,10 +269,35 @@ export default function AdminCourseEditor() {
         <div>
           <div className="page-head" style={{ marginBottom: 12 }}>
             <h3 style={{ fontSize: 16 }}>Modules & Lessons</h3>
-            <button type="button" className="btn btn-outline btn-sm" onClick={addModule} disabled={!editing}>
-              + Add module
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {quizStats.length > 0 && (
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowQuizStats((s) => !s)}>
+                  📊 Quiz analytics
+                </button>
+              )}
+              <button type="button" className="btn btn-outline btn-sm" onClick={addModule} disabled={!editing}>
+                + Add module
+              </button>
+            </div>
           </div>
+
+          {showQuizStats && quizStats.length > 0 && (
+            <div className="card editor-card" style={{ marginBottom: 16 }}>
+              <h3>📊 Quiz analytics</h3>
+              {quizStats.map((q) => (
+                <div key={q.quiz_id} style={{ borderTop: '1px solid var(--border)', padding: '12px 0' }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{q.quiz_title}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 8 }}>{q.lesson_title}</div>
+                  <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                    <div><b>{q.attempts}</b> attempts</div>
+                    <div><b>{q.students}</b> students</div>
+                    <div><b>{q.avg_score}%</b> avg score</div>
+                    <div><b>{q.pass_rate}%</b> pass rate</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {!editing && (
             <div className="empty-state" style={{ border: '1px dashed var(--border)', borderRadius: 12 }}>

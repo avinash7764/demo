@@ -33,6 +33,9 @@ router.get('/profile', (req, res) => {
     lessonsDone: db
       .prepare('SELECT COUNT(*) AS c FROM lesson_progress WHERE user_id = ? AND completed = 1')
       .get(req.user.id).c,
+    minutesWatched: Math.round(
+      (db.prepare('SELECT COALESCE(SUM(watched_sec), 0) AS s FROM lesson_progress WHERE user_id = ?').get(req.user.id).s) / 60
+    ),
   };
   res.json({ user: req.user, stats });
 });

@@ -75,6 +75,7 @@ export default function CoursePlayer() {
   const [watched, setWatched] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [notes, setNotes] = useState(null);
+  const [lessonFilter, setLessonFilter] = useState('');
   const videoRef = useRef(null);
   const lastReport = useRef(0);
 
@@ -361,12 +362,26 @@ export default function CoursePlayer() {
           <div className="progress"><span style={{ width: `${course.progress}%` }} /></div>
         </div>
 
+        <div className="player-search">
+          <input
+            type="search"
+            placeholder="Search lessons…"
+            value={lessonFilter}
+            onChange={(e) => setLessonFilter(e.target.value)}
+          />
+        </div>
+
         <ul className="lesson-nav">
-          {course.modules.map((m) => (
+          {course.modules.map((m) => {
+            const filteredLessons = m.lessons.filter((l) =>
+              l.title.toLowerCase().includes(lessonFilter.toLowerCase())
+            );
+            if (filteredLessons.length === 0 && lessonFilter) return null;
+            return (
             <li key={m.id}>
               <div className="module-label">{m.title}</div>
               <ul className="lesson-nav" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {m.lessons.map((l) => {
+                {filteredLessons.map((l) => {
                   const lp = l.duration_sec ? Math.min(100, Math.round(((l.watched_sec || 0) / l.duration_sec) * 100)) : 0;
                   return (
                     <li
@@ -399,7 +414,8 @@ export default function CoursePlayer() {
                 })}
               </ul>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </aside>
     </div>
