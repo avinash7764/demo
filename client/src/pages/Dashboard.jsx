@@ -17,10 +17,14 @@ export default function Dashboard() {
   }, []);
 
   const [announcements, setAnnouncements] = useState([]);
+  const [minutes, setMinutes] = useState(0);
 
   useEffect(() => {
     api('/student/announcements')
       .then((d) => setAnnouncements(d.announcements))
+      .catch(() => {});
+    api('/student/profile')
+      .then((d) => setMinutes(d.stats.minutesWatched || 0))
       .catch(() => {});
   }, []);
 
@@ -28,6 +32,8 @@ export default function Dashboard() {
   const completed = courses.reduce((n, c) => n + Math.round(((c.progress || 0) / 100) * (c.lesson_count || 0)), 0);
   const inProgress = courses.filter((c) => c.progress > 0 && c.progress < 100);
   const doneCourses = courses.filter((c) => c.progress >= 100);
+
+  const fmtMinutes = (m) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
 
   return (
     <div className="container">
@@ -59,6 +65,10 @@ export default function Dashboard() {
         <div className="card stat-card">
           <div className="val">{doneCourses.length}</div>
           <div className="label">Certificates earned</div>
+        </div>
+        <div className="card stat-card">
+          <div className="val">{fmtMinutes(minutes)}</div>
+          <div className="label">Minutes watched</div>
         </div>
       </div>
 

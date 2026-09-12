@@ -133,6 +133,15 @@ export default function CourseDetail() {
     }
   }
 
+  async function shareCourse() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast('Link copied to clipboard');
+    } catch {
+      toast('Could not copy link', 'error');
+    }
+  }
+
   if (loading) {
     return <div className="page-loading"><div className="spinner" /></div>;
   }
@@ -174,11 +183,19 @@ export default function CourseDetail() {
           </div>
           <div className="enroll-panel">
             {thumb ? <img src={thumb} alt={course.title} style={{ borderRadius: 8, marginBottom: 16 }} /> : null}
+            <button
+              className="bookmark-btn"
+              onClick={shareCourse}
+              style={{ position: 'absolute', top: 16, right: 16, fontSize: 18, background: 'var(--bg)', borderRadius: 20, color: 'var(--text-muted)' }}
+              title="Share this course"
+            >
+              🔗
+            </button>
             {user && user.role !== 'admin' && (
               <button
                 className={`bookmark-btn ${course.bookmarked ? 'on' : ''}`}
                 onClick={toggleBookmark}
-                style={{ position: 'absolute', top: 16, right: 16, fontSize: 24, background: 'var(--bg)', borderRadius: 20 }}
+                style={{ position: 'absolute', top: 16, right: 52, fontSize: 24, background: 'var(--bg)', borderRadius: 20 }}
                 title={course.bookmarked ? 'Remove from wishlist' : 'Save to wishlist'}
               >
                 {course.bookmarked ? '♥' : '♡'}

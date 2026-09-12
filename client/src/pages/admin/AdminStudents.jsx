@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../../lib/api.js';
+import { api, getToken } from '../../lib/api.js';
 import { useToast } from '../../components/toast.jsx';
 
 export default function AdminStudents() {
@@ -28,6 +28,9 @@ export default function AdminStudents() {
     <>
       <div className="page-head">
         <h1>Students</h1>
+        <a href={`/api/admin/students/export?token=${encodeURIComponent(getToken())}`} className="btn btn-outline btn-sm">
+          ⬇️ Export CSV
+        </a>
       </div>
 
       <div className="toolbar" style={{ margin: '0 0 20px' }}>

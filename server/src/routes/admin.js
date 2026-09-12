@@ -335,6 +335,33 @@ router.delete('/discussions/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- quiz analytics ----------
+router.get('/courses/:id/quiz-stats', (req, res) => {
+  const lessons = db
+    .prepare(
+      `SELECT l.id AS lesson_id, l.title AS lesson_title, q.id AS quiz_id, q.title AS quiz_title
+       FROM lessons l
+       JOIN modules m ON m.id = l.module_id
+       JOIN quizzes q ON q.lesson_id = l.id
+       WHERE m.course_id = ? ORDER BY m.position, l.position`
+    )
+    .all(req.params.id);
+  const stats = lessons.map((l) => {
+    const attempts = db.prepare('SELECT COUNT(*) AS c FROM quiz_attempts WHERE quiz_id = ?').get(l.quiz_id).c;
+    const avg = db.prepare('SELECT AVG(score) AS a FROM quiz_attempts WHERE quiz_id = ?').get(l.quiz_id).a;
+    const passed = db.prepare('SELECT COUNT(*) AS c FROM quiz_attempts WHERE quiz_id = ? AND passed = 1').get(l.quiz_id).c;
+    const students = db.prepare('SELECT COUNT(DISTINCT user_id) AS c FROM quiz_attempts WHERE quiz_id = ?').get(l.quiz_id).c;
+    return {
+      ...l,
+      attempts,
+      students,
+      avg_score: avg ? Math.round(avg * 10) / 10 : 0,
+      pass_rate: attempts ? Math.round((passed / attempts) * 100) : 0,
+    };
+  });
+  res.json({ quizzes: stats });
+});
+
 // ---------- reviews ----------
 router.get('/reviews', (req, res) => {
   const rows = db
@@ -357,6 +384,33 @@ router.delete('/reviews/:id', (req, res) => {
 });
 
 // ---------- students ----------
+// CSV export of all students with their learning stats.
+router.get('/students/export', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT u.name, u.email, u.created_at,
+        (SELECT COUNT(*) FROM enrollments e WHERE e.user_id = u.id) AS courses_enrolled,
+        (SELECT COUNT(*) FROM enrollments e WHERE e.user_id = u.id AND e.completed_at IS NOT NULL) AS courses_completed,
+        (SELECT COUNT(*) FROM lesson_progress lp WHERE lp.user_id = u.id AND lp.completed = 1) AS lessons_completed,
+        (SELECT COALESCE(SUM(lp.watched_sec), 0) FROM lesson_progress lp WHERE lp.user_id = u.id) AS seconds_watched
+       FROM users u WHERE u.role = 'student' ORDER BY u.created_at DESC`
+    )
+    .all();
+
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = ['Name', 'Email', 'Joined', 'Courses Enrolled', 'Courses Completed', 'Lessons Completed', 'Minutes Watched'];
+  const lines = [header.map(escape).join(',')];
+  for (const r of rows) {
+    lines.push([
+      escape(r.name), escape(r.email), escape(r.created_at), r.courses_enrolled, r.courses_completed, r.lessons_completed, Math.round((r.seconds_watched || 0) / 60),
+    ].join(','));
+  }
+  const csv = lines.join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="students.csv"');
+  res.send('\uFEFF' + csv); // BOM for Excel compatibility
+});
+
 router.get('/students', (req, res) => {
   const { q } = req.query;
   const params = ["student"];

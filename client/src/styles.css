@@ -266,6 +266,14 @@ img { max-width: 100%; display: block; }
 .lesson-watchbar { display: block; height: 4px; background: var(--border); border-radius: 10px; margin-top: 5px; overflow: hidden; }
 .lesson-watchbar > span { display: block; height: 100%; background: var(--primary); border-radius: 10px; }
 
+/* lesson search in player sidebar */
+.player-search { padding: 0 20px 14px; }
+.player-search input {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13.5px; background: var(--bg);
+}
+.player-search input:focus { outline: none; border-color: var(--primary); background: #fff; }
+
 .player-side { background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; height: 100vh; }
 .player-side .side-head { padding: 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 2; }
 .player-side .side-head .back { font-size: 13px; color: var(--text-muted); }
