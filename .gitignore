@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# build output
+client/dist/
+dist/
+build/
+
+# runtime data & user uploads (videos/notes/thumbnails)
+server/uploads/*
+!server/uploads/.gitkeep
+server/data/*.db
+server/data/*.db-journal
+server/data/*.db-wal
+server/data/*.db-shm
+
+# env / secrets
+.env
+.env.local
+*.local
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
