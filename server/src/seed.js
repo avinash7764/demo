@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { db, uniqueSlug } from './db.js';
 import { UPLOAD_DIR } from './stream.js';
 
@@ -90,7 +90,7 @@ function slug(s) {
   return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-function run() {
+export function run() {
   console.log('Seeding database…');
 
   const adminId = upsertUser('Admin', process.env.ADMIN_EMAIL || 'admin@learnhub.com', process.env.ADMIN_PASSWORD || 'admin123', 'admin');
@@ -243,4 +243,20 @@ function run() {
   void adminId; void studentId;
 }
 
-run();
+// Seed only when the database has no users/courses yet. This keeps the app
+// self-healing: if the (gitignored) SQLite file is missing after a fresh
+// checkout/restart, the server recreates the demo data automatically.
+export function seedIfEmpty() {
+  const users = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
+  const courses = db.prepare('SELECT COUNT(*) AS c FROM courses').get().c;
+  if (users === 0 || courses === 0) {
+    run();
+    return true;
+  }
+  return false;
+}
+
+// Allow direct execution: `node src/seed.js`
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run();
+}

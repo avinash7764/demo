@@ -10,9 +10,13 @@ import courseRoutes from './routes/courses.js';
 import studentRoutes from './routes/student.js';
 import adminRoutes from './routes/admin.js';
 import { UPLOAD_DIR, mimeFor } from './stream.js';
+import { seedIfEmpty } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4000;
+
+// Ensure demo data exists (idempotent — only seeds an empty database).
+seedIfEmpty();
 
 const app = express();
 

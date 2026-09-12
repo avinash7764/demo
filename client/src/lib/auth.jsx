@@ -18,6 +18,18 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // When a stored token is rejected (expired / invalid / account no longer
+  // exists), just clear the session. Protected routes (RequireAuth) will
+  // redirect to the login screen automatically — no scary error message.
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setUser(null);
+      setToken(null);
+    };
+    window.addEventListener('learnhub:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('learnhub:unauthorized', onUnauthorized);
+  }, []);
+
   const login = useCallback(async (email, password) => {
     const d = await api('/auth/login', { method: 'POST', body: { email, password }, auth: false });
     setToken(d.token);
