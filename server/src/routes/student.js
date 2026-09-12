@@ -311,6 +311,35 @@ router.delete('/courses/:id/review', (req, res) => {
   res.json({ ok: true });
 });
 
+// Inline preview of text-based notes (markdown / text). Returns { preview, type }
+// for text files, or { binary: true } for PDF/DOC/etc.
+router.get('/lessons/:id/notes-preview', (req, res) => {
+  const lesson = db.prepare('SELECT * FROM lessons WHERE id = ?').get(req.params.id);
+  if (!lesson || !lesson.notes_path) {
+    return res.status(404).json({ error: 'No notes for this lesson.' });
+  }
+  const courseId = db
+    .prepare('SELECT course_id FROM modules WHERE id = ?')
+    .get(lesson.module_id)?.course_id;
+  const enrolled = db
+    .prepare('SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?')
+    .get(req.user.id, courseId);
+  if (!enrolled && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Enroll in this course to view notes.' });
+  }
+  const filePath = path.resolve(UPLOAD_DIR, lesson.notes_path);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Notes file not found.' });
+  }
+  const ext = path.extname(lesson.notes_path).toLowerCase();
+  const TEXT_EXTS = ['.md', '.markdown', '.txt', '.text', '.html', '.htm', '.csv', '.json'];
+  if (!TEXT_EXTS.includes(ext)) {
+    return res.json({ binary: true, name: lesson.notes_name || path.basename(lesson.notes_path) });
+  }
+  const preview = fs.readFileSync(filePath, 'utf8').slice(0, 20000);
+  res.json({ binary: false, preview, type: ext.replace('.', '') || 'text', name: lesson.notes_name || path.basename(lesson.notes_path) });
+});
+
 // Download lesson notes.
 router.get('/lessons/:id/notes', (req, res) => {
   const lesson = db.prepare('SELECT * FROM lessons WHERE id = ?').get(req.params.id);
