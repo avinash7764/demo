@@ -16,6 +16,7 @@ export default function Home() {
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [level, setLevel] = useState('all');
   const [free, setFree] = useState('all');
+  const [sort, setSort] = useState('newest');
 
   useEffect(() => {
     setLoading(true);
@@ -24,12 +25,13 @@ export default function Home() {
     if (category !== 'all') params.set('category', category);
     if (level !== 'all') params.set('level', level);
     if (free !== 'all') params.set('free', free);
+    if (sort !== 'newest') params.set('sort', sort);
     const qs = params.toString();
     api(`/courses${qs ? `?${qs}` : ''}`, { auth: false })
       .then((d) => setCourses(d.courses))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [q, category, level, free]);
+  }, [q, category, level, free, sort]);
 
   return (
     <>
@@ -85,6 +87,11 @@ export default function Home() {
             <option value="all">Free & paid</option>
             <option value="1">Free only</option>
             <option value="0">Paid only</option>
+          </select>
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="newest">Newest</option>
+            <option value="popular">Most popular</option>
+            <option value="rating">Highest rated</option>
           </select>
         </div>
 

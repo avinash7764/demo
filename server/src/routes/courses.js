@@ -84,9 +84,10 @@ router.get('/instructors', (req, res) => {
   res.json({ instructors: rows });
 });
 
-// Public catalog listing with optional search & filters (personalised bookmark state if logged in).
+// Public catalog listing with optional search, filters & sorting
+// (personalised bookmark state if logged in).
 router.get('/', optionalAuth, (req, res) => {
-  const { q, category, level, free } = req.query;
+  const { q, category, level, free, sort } = req.query;
   const clauses = ['c.published = 1'];
   const params = [];
   if (q) {
@@ -105,6 +106,13 @@ router.get('/', optionalAuth, (req, res) => {
   if (free === '1') clauses.push('c.is_free = 1');
   if (free === '0') clauses.push('c.is_free = 0');
 
+  // Sorting: newest (default) | popular (most enrollments) | rating (best reviews)
+  const orderBy = {
+    popular: 'student_count DESC, c.created_at DESC',
+    rating: 'avg_rating DESC, review_count DESC, c.created_at DESC',
+    newest: 'c.created_at DESC',
+  }[sort] || 'c.created_at DESC';
+
   const rows = db
     .prepare(
       `SELECT c.*,
@@ -114,7 +122,7 @@ router.get('/', optionalAuth, (req, res) => {
         (SELECT COUNT(*) FROM reviews r WHERE r.course_id = c.id) AS review_count
        FROM courses c
        WHERE ${clauses.join(' AND ')}
-       ORDER BY c.created_at DESC`
+       ORDER BY ${orderBy}`
     )
     .all(...params);
 

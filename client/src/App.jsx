@@ -15,6 +15,7 @@ import About from './pages/About.jsx';
 import Categories from './pages/Categories.jsx';
 import Instructors from './pages/Instructors.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import NotFound from './pages/NotFound.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminCourses from './pages/admin/AdminCourses.jsx';
 import AdminCourseEditor from './pages/admin/AdminCourseEditor.jsx';
@@ -124,7 +125,7 @@ export default function App() {
         <Route path="reviews" element={<AdminReviews />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
