@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import CourseCard from '../components/CourseCard.jsx';
@@ -9,10 +9,11 @@ const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
 
 export default function Home() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState('');
-  const [category, setCategory] = useState('all');
+  const [q, setQ] = useState(searchParams.get('q') || '');
+  const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [level, setLevel] = useState('all');
   const [free, setFree] = useState('all');
 
@@ -102,7 +103,11 @@ export default function Home() {
             <div className="result-count">{courses.length} course{courses.length === 1 ? '' : 's'} found</div>
             <div className="course-grid">
               {courses.map((c) => (
-                <CourseCard key={c.id} course={c} />
+                <CourseCard
+                  key={c.id}
+                  course={c}
+                  onBookmarkToggle={(id, val) => setCourses((cs) => cs.map((x) => (x.id === id ? { ...x, bookmarked: val } : x)))}
+                />
               ))}
             </div>
           </>

@@ -42,11 +42,50 @@ export function fullCourse(id, userId) {
   course.completed_at = enrollment?.completed_at || null;
   course.progress = userId ? courseProgressFor(userId, id) : 0;
   course.rating = courseRating(id);
+  course.bookmarked = userId
+    ? !!db.prepare('SELECT id FROM bookmarks WHERE user_id = ? AND course_id = ?').get(userId, id)
+    : false;
   return course;
 }
 
-// Public catalog listing with optional search & filters.
-router.get('/', (req, res) => {
+// Distinct categories with course counts (published courses only).
+router.get('/categories', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT c.category,
+        COUNT(*) AS course_count,
+        (SELECT COUNT(*) FROM enrollments e JOIN courses c2 ON c2.id = e.course_id WHERE c2.category = c.category) AS student_count
+       FROM courses c WHERE c.published = 1
+       GROUP BY c.category ORDER BY course_count DESC`
+    )
+    .all();
+  res.json({ categories: rows });
+});
+
+// Instructors with aggregated stats.
+router.get('/instructors', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT c.instructor AS name,
+        COUNT(*) AS course_count,
+        SUM((SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id)) AS student_count,
+        AVG((SELECT AVG(rating) FROM reviews r WHERE r.course_id = c.id)) AS avg_rating,
+        SUM((SELECT COUNT(*) FROM reviews r WHERE r.course_id = c.id)) AS review_count
+       FROM courses c
+       WHERE c.published = 1 AND c.instructor != ''
+       GROUP BY c.instructor ORDER BY student_count DESC, course_count DESC`
+    )
+    .all()
+    .map((r) => ({
+      ...r,
+      avg_rating: r.avg_rating ? Math.round(r.avg_rating * 10) / 10 : 0,
+      review_count: r.review_count || 0,
+    }));
+  res.json({ instructors: rows });
+});
+
+// Public catalog listing with optional search & filters (personalised bookmark state if logged in).
+router.get('/', optionalAuth, (req, res) => {
   const { q, category, level, free } = req.query;
   const clauses = ['c.published = 1'];
   const params = [];
@@ -78,6 +117,13 @@ router.get('/', (req, res) => {
        ORDER BY c.created_at DESC`
     )
     .all(...params);
+
+  if (req.user) {
+    const bookmarkedIds = new Set(
+      db.prepare('SELECT course_id FROM bookmarks WHERE user_id = ?').all(req.user.id).map((r) => r.course_id)
+    );
+    rows.forEach((c) => (c.bookmarked = bookmarkedIds.has(c.id)));
+  }
   res.json({ courses: rows });
 });
 

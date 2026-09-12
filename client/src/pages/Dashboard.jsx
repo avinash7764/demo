@@ -86,7 +86,12 @@ export default function Dashboard() {
       ) : (
         <div className="dash-grid">
           {courses.map((c) => (
-            <CourseCard key={c.id} course={c} progress={c.progress} />
+            <CourseCard
+              key={c.id}
+              course={c}
+              progress={c.progress}
+              onBookmarkToggle={(id, val) => setCourses((cs) => cs.map((x) => (x.id === id ? { ...x, bookmarked: val } : x)))}
+            />
           ))}
         </div>
       )}

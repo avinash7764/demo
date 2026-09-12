@@ -150,6 +150,39 @@ router.get('/lessons/:id/stream', (req, res) => {
   streamVideo(filePath, req, res);
 });
 
+// ---------- bookmarks / wishlist ----------
+router.get('/bookmarks', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT c.*, b.created_at AS bookmarked_at,
+        (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = c.id) AS lesson_count,
+        (SELECT AVG(rating) FROM reviews r WHERE r.course_id = c.id) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews r WHERE r.course_id = c.id) AS review_count
+       FROM bookmarks b JOIN courses c ON c.id = b.course_id
+       WHERE b.user_id = ? AND c.published = 1
+       ORDER BY b.created_at DESC`
+    )
+    .all(req.user.id);
+  res.json({ courses: rows });
+});
+
+router.post('/courses/:id/bookmark', (req, res) => {
+  const course = db.prepare('SELECT id FROM courses WHERE id = ? AND published = 1').get(req.params.id);
+  if (!course) return res.status(404).json({ error: 'Course not found.' });
+  const existing = db
+    .prepare('SELECT id FROM bookmarks WHERE user_id = ? AND course_id = ?')
+    .get(req.user.id, course.id);
+  if (!existing) {
+    db.prepare('INSERT INTO bookmarks (user_id, course_id) VALUES (?, ?)').run(req.user.id, course.id);
+  }
+  res.json({ bookmarked: true });
+});
+
+router.delete('/courses/:id/bookmark', (req, res) => {
+  db.prepare('DELETE FROM bookmarks WHERE user_id = ? AND course_id = ?').run(req.user.id, req.params.id);
+  res.json({ bookmarked: false });
+});
+
 // ---------- reviews ----------
 router.get('/courses/:id/review', (req, res) => {
   const review = db

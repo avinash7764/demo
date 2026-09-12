@@ -14,7 +14,10 @@ export default function PublicLayout() {
           </Link>
           <nav className="nav-links">
             <NavLink to="/" end>Courses</NavLink>
+            <NavLink to="/categories">Categories</NavLink>
+            <NavLink to="/instructors">Instructors</NavLink>
             {user && <NavLink to="/dashboard">My Learning</NavLink>}
+            {user && <NavLink to="/wishlist">Wishlist</NavLink>}
             {user?.role === 'admin' && <NavLink to="/admin">Admin</NavLink>}
           </nav>
           <div className="nav-right">
@@ -50,6 +53,11 @@ export default function PublicLayout() {
       <footer className="footer">
         <div className="footer-inner">
           <div className="brand">🎓 LearnHub</div>
+          <div style={{ display: 'flex', gap: 20 }}>
+            <Link to="/about">About</Link>
+            <Link to="/categories">Categories</Link>
+            <Link to="/instructors">Instructors</Link>
+          </div>
           <div>© {new Date().getFullYear()} LearnHub. Learn, build, grow.</div>
         </div>
       </footer>

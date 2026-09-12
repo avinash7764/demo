@@ -121,6 +121,18 @@ export default function CourseDetail() {
     }
   }
 
+  async function toggleBookmark() {
+    if (!user) return navigate('/login');
+    try {
+      const next = !course.bookmarked;
+      await api(`/student/courses/${id}/bookmark`, { method: next ? 'POST' : 'DELETE' });
+      setCourse((c) => ({ ...c, bookmarked: next }));
+      toast(next ? 'Saved to wishlist' : 'Removed from wishlist');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
+
   if (loading) {
     return <div className="page-loading"><div className="spinner" /></div>;
   }
@@ -162,6 +174,16 @@ export default function CourseDetail() {
           </div>
           <div className="enroll-panel">
             {thumb ? <img src={thumb} alt={course.title} style={{ borderRadius: 8, marginBottom: 16 }} /> : null}
+            {user && user.role !== 'admin' && (
+              <button
+                className={`bookmark-btn ${course.bookmarked ? 'on' : ''}`}
+                onClick={toggleBookmark}
+                style={{ position: 'absolute', top: 16, right: 16, fontSize: 24, background: 'var(--bg)', borderRadius: 20 }}
+                title={course.bookmarked ? 'Remove from wishlist' : 'Save to wishlist'}
+              >
+                {course.bookmarked ? '♥' : '♡'}
+              </button>
+            )}
             {user?.role === 'admin' ? (
               <Link to={`/admin/courses/${course.id}/edit`} className="btn btn-outline btn-block">
                 Edit in admin panel

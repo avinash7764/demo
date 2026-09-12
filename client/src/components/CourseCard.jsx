@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
-import { thumbUrl } from '../lib/api.js';
+import { api, thumbUrl } from '../lib/api.js';
+import { useAuth } from '../lib/auth.jsx';
+import { useToast } from './toast.jsx';
 
 const CATEGORY_ICONS = {
   'Web Development': '💻',
@@ -11,11 +13,38 @@ const CATEGORY_ICONS = {
   'Cloud': '☁️',
 };
 
-export default function CourseCard({ course, progress }) {
+export default function CourseCard({ course, progress, onBookmarkToggle }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const thumb = thumbUrl(course.thumbnail);
+
+  async function toggleBookmark(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+    try {
+      const next = !course.bookmarked;
+      await api(`/student/courses/${course.id}/bookmark`, { method: next ? 'POST' : 'DELETE' });
+      toast(next ? 'Saved to wishlist' : 'Removed from wishlist');
+      onBookmarkToggle?.(course.id, next);
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
   return (
     <Link to={`/courses/${course.id}`} className="course-card">
       <div className="course-thumb">
+        {user && (
+          <button
+            className={`bookmark-btn ${course.bookmarked ? 'on' : ''}`}
+            onClick={toggleBookmark}
+            title={course.bookmarked ? 'Remove from wishlist' : 'Save to wishlist'}
+            style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.92)', borderRadius: 20 }}
+          >
+            {course.bookmarked ? '♥' : '♡'}
+          </button>
+        )}
         {thumb ? (
           <img src={thumb} alt={course.title} loading="lazy" />
         ) : (

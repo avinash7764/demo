@@ -15,6 +15,7 @@ export default function AdminLayout() {
           <NavLink to="/admin" end>Dashboard</NavLink>
           <NavLink to="/admin/courses">Courses</NavLink>
           <NavLink to="/admin/students">Students</NavLink>
+          <NavLink to="/admin/reviews">Reviews</NavLink>
         </nav>
         <div className="side-foot">
           <div style={{ fontSize: 13, marginBottom: 12 }}>

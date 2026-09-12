@@ -245,6 +245,27 @@ router.put('/courses/:id/reorder', (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- reviews ----------
+router.get('/reviews', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT r.id, r.rating, r.comment, r.created_at,
+              u.name AS student_name, u.email AS student_email,
+              c.id AS course_id, c.title AS course_title
+       FROM reviews r
+       JOIN users u ON u.id = r.user_id
+       JOIN courses c ON c.id = r.course_id
+       ORDER BY r.created_at DESC`
+    )
+    .all();
+  res.json({ reviews: rows });
+});
+
+router.delete('/reviews/:id', (req, res) => {
+  db.prepare('DELETE FROM reviews WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 // ---------- students ----------
 router.get('/students', (req, res) => {
   const { q } = req.query;
