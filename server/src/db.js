@@ -85,6 +85,51 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   UNIQUE(user_id, course_id)
 );
 
+CREATE TABLE IF NOT EXISTS quizzes (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  lesson_id    INTEGER NOT NULL UNIQUE REFERENCES lessons(id) ON DELETE CASCADE,
+  title        TEXT NOT NULL DEFAULT 'Quiz',
+  pass_percent INTEGER NOT NULL DEFAULT 70
+);
+
+CREATE TABLE IF NOT EXISTS quiz_questions (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  quiz_id  INTEGER NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  option_a TEXT NOT NULL DEFAULT '',
+  option_b TEXT NOT NULL DEFAULT '',
+  option_c TEXT NOT NULL DEFAULT '',
+  option_d TEXT NOT NULL DEFAULT '',
+  correct  TEXT NOT NULL DEFAULT 'a',   -- 'a' | 'b' | 'c' | 'd'
+  position INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  quiz_id    INTEGER NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+  score      INTEGER NOT NULL DEFAULT 0,   -- percent
+  passed     INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS discussions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  lesson_id  INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  parent_id  INTEGER REFERENCES discussions(id) ON DELETE CASCADE,
+  body       TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL,
+  body       TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS lesson_progress (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

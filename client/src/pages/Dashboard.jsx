@@ -16,6 +16,14 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const [announcements, setAnnouncements] = useState([]);
+
+  useEffect(() => {
+    api('/student/announcements')
+      .then((d) => setAnnouncements(d.announcements))
+      .catch(() => {});
+  }, []);
+
   const totalLessons = courses.reduce((n, c) => n + (c.lesson_count || 0), 0);
   const completed = courses.reduce((n, c) => n + Math.round(((c.progress || 0) / 100) * (c.lesson_count || 0)), 0);
   const inProgress = courses.filter((c) => c.progress > 0 && c.progress < 100);
@@ -69,6 +77,21 @@ export default function Dashboard() {
                 <div className="progress"><span style={{ width: `${c.progress}%` }} /></div>
                 <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{c.progress}% complete</div>
               </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      {announcements.length > 0 && (
+        <>
+          <div className="section-title"><h2>Announcements</h2></div>
+          <div className="announcements">
+            {announcements.map((a) => (
+              <div className="card announcement" key={a.id}>
+                <div className="a-title">{a.title}</div>
+                <div className="a-meta">{a.author} · {new Date(a.created_at + 'Z').toLocaleDateString()}</div>
+                <div className="a-body">{a.body}</div>
+              </div>
             ))}
           </div>
         </>

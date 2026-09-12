@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api, getToken } from '../lib/api.js';
 import { useToast } from '../components/toast.jsx';
+import Quiz from '../components/Quiz.jsx';
+import Discussion from '../components/Discussion.jsx';
 
 function fmt(sec) {
   if (!sec) return '';
@@ -162,6 +164,9 @@ export default function CoursePlayer() {
                 </p>
               </div>
             )}
+
+            <Quiz lessonId={active.id} />
+            <Discussion lessonId={active.id} />
           </>
         )}
       </div>

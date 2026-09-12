@@ -443,6 +443,48 @@ img { max-width: 100%; display: block; }
 .feature-card h3 { font-size: 17px; }
 .feature-card p { color: var(--text-muted); font-size: 14px; margin: 0; }
 
+/* ---------- quizzes ---------- */
+.quiz-box { margin-top: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.quiz-box h3 { font-size: 17px; margin-bottom: 4px; }
+.quiz-box .q-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+.quiz-question { padding: 16px 0; border-top: 1px solid var(--border); }
+.quiz-question .q-text { font-weight: 600; margin-bottom: 10px; }
+.quiz-option {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 10px 14px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: #fff; cursor: pointer; font-size: 14px; transition: 0.12s;
+}
+.quiz-option:hover { border-color: var(--primary); }
+.quiz-option.selected { border-color: var(--primary); background: var(--primary-soft); }
+.quiz-option.correct { border-color: var(--success); background: #ecfdf5; }
+.quiz-option.wrong { border-color: var(--danger); background: #fef2f2; }
+.quiz-option .opt-letter { font-weight: 700; color: var(--text-muted); }
+.quiz-option.selected .opt-letter, .quiz-option.correct .opt-letter { color: var(--primary); }
+.quiz-result { text-align: center; padding: 20px 0; }
+.quiz-result .score { font-size: 44px; font-weight: 800; color: var(--primary); }
+.quiz-result .score.fail { color: var(--danger); }
+
+/* ---------- discussions ---------- */
+.discussion-box { margin-top: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.discussion-box h3 { font-size: 17px; margin-bottom: 16px; }
+.discussion-post { padding: 14px 0; border-top: 1px solid var(--border); }
+.discussion-post .d-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.discussion-post .d-author { font-weight: 600; font-size: 13.5px; }
+.discussion-post .d-when { font-size: 12px; color: var(--text-muted); }
+.discussion-post .d-body { font-size: 14px; white-space: pre-wrap; }
+.discussion-post .d-actions { margin-top: 6px; display: flex; gap: 8px; }
+.discussion-replies { margin-left: 20px; padding-left: 16px; border-left: 2px solid var(--border); }
+.discussion-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.discussion-form textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; min-height: 60px; resize: vertical; }
+.discussion-form textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+/* ---------- announcements ---------- */
+.announcements { display: flex; flex-direction: column; gap: 14px; margin-bottom: 40px; }
+.announcement { padding: 18px 20px; border-left: 4px solid var(--primary); }
+.announcement .a-title { font-weight: 700; margin-bottom: 4px; }
+.announcement .a-meta { font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; }
+.announcement .a-body { font-size: 14px; color: var(--text); white-space: pre-wrap; }
+
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {  .player-shell { grid-template-columns: 1fr; }
   .player-side { height: auto; border-left: none; border-top: 1px solid var(--border); }

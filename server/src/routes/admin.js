@@ -245,6 +245,96 @@ router.put('/courses/:id/reorder', (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- quizzes ----------
+router.get('/lessons/:id/quiz', (req, res) => {
+  const quiz = db.prepare('SELECT * FROM quizzes WHERE lesson_id = ?').get(req.params.id);
+  if (!quiz) return res.status(404).json({ error: 'No quiz for this lesson.' });
+  const questions = db
+    .prepare('SELECT * FROM quiz_questions WHERE quiz_id = ? ORDER BY position ASC, id ASC')
+    .all(quiz.id);
+  res.json({ quiz, questions });
+});
+
+// Upsert a lesson's quiz (with full question list including correct answers).
+router.put('/lessons/:id/quiz', (req, res) => {
+  const lesson = db.prepare('SELECT id FROM lessons WHERE id = ?').get(req.params.id);
+  if (!lesson) return res.status(404).json({ error: 'Lesson not found.' });
+  const { title = 'Quiz', pass_percent = 70, questions = [] } = req.body || {};
+  let quiz = db.prepare('SELECT * FROM quizzes WHERE lesson_id = ?').get(lesson.id);
+  if (quiz) {
+    db.prepare('UPDATE quizzes SET title = ?, pass_percent = ? WHERE id = ?')
+      .run(String(title).slice(0, 120), Math.min(100, Math.max(0, parseInt(pass_percent, 10) || 0)), quiz.id);
+  } else {
+    const info = db
+      .prepare('INSERT INTO quizzes (lesson_id, title, pass_percent) VALUES (?, ?, ?)')
+      .run(lesson.id, String(title).slice(0, 120), Math.min(100, Math.max(0, parseInt(pass_percent, 10) || 0)));
+    quiz = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(info.lastInsertRowid);
+  }
+  // Replace questions.
+  db.prepare('DELETE FROM quiz_questions WHERE quiz_id = ?').run(quiz.id);
+  questions.forEach((q, i) => {
+    if (!q?.question) return;
+    db.prepare(
+      `INSERT INTO quiz_questions (quiz_id, question, option_a, option_b, option_c, option_d, correct, position)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      quiz.id,
+      String(q.question).slice(0, 500),
+      String(q.option_a || '').slice(0, 300),
+      String(q.option_b || '').slice(0, 300),
+      String(q.option_c || '').slice(0, 300),
+      String(q.option_d || '').slice(0, 300),
+      ['a', 'b', 'c', 'd'].includes(q.correct) ? q.correct : 'a',
+      i + 1
+    );
+  });
+  const updated = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(quiz.id);
+  const qs = db
+    .prepare('SELECT * FROM quiz_questions WHERE quiz_id = ? ORDER BY position ASC, id ASC')
+    .all(quiz.id);
+  res.json({ quiz: updated, questions: qs });
+});
+
+router.delete('/lessons/:id/quiz', (req, res) => {
+  db.prepare('DELETE FROM quizzes WHERE lesson_id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// ---------- announcements ----------
+router.get('/announcements', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT a.id, a.title, a.body, a.created_at, u.name AS author
+       FROM announcements a JOIN users u ON u.id = a.user_id
+       ORDER BY a.created_at DESC`
+    )
+    .all();
+  res.json({ announcements: rows });
+});
+
+router.post('/announcements', (req, res) => {
+  const { title, body = '' } = req.body || {};
+  if (!title || !String(title).trim()) return res.status(400).json({ error: 'Title is required.' });
+  const info = db
+    .prepare('INSERT INTO announcements (user_id, title, body) VALUES (?, ?, ?)')
+    .run(req.user.id, String(title).trim().slice(0, 160), String(body).trim().slice(0, 4000));
+  const created = db
+    .prepare('SELECT a.*, u.name AS author FROM announcements a JOIN users u ON u.id = a.user_id WHERE a.id = ?')
+    .get(info.lastInsertRowid);
+  res.status(201).json({ announcement: created });
+});
+
+router.delete('/announcements/:id', (req, res) => {
+  db.prepare('DELETE FROM announcements WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// ---------- discussion moderation ----------
+router.delete('/discussions/:id', (req, res) => {
+  db.prepare('DELETE FROM discussions WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 // ---------- reviews ----------
 router.get('/reviews', (req, res) => {
   const rows = db

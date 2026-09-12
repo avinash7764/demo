@@ -285,6 +285,39 @@ export function run() {
       .run(s.userId, courseId, s.rating, s.comment);
   }
 
+  // A demo quiz on the first lesson of the first course.
+  const firstLesson = db
+    .prepare(
+      `SELECT l.id FROM lessons l JOIN modules m ON m.id = l.module_id
+       WHERE m.course_id = (SELECT MIN(id) FROM courses) ORDER BY m.position, l.position LIMIT 1`
+    )
+    .get();
+  if (firstLesson && !db.prepare('SELECT id FROM quizzes WHERE lesson_id = ?').get(firstLesson.id)) {
+    const qinfo = db
+      .prepare("INSERT INTO quizzes (lesson_id, title, pass_percent) VALUES (?, 'Course Orientation Quiz', 60)")
+      .run(firstLesson.id);
+    const qs = [
+      { q: 'What is the main focus of this course?', a: 'Building real projects', b: 'Memorizing syntax', c: 'Writing essays', d: 'None of the above', correct: 'a' },
+      { q: 'Which tools do you need installed?', a: 'A browser only', b: 'Node.js, VS Code and Git', c: 'A spreadsheet app', d: 'Photoshop', correct: 'b' },
+      { q: 'How are lessons delivered?', a: 'Video + downloadable notes', b: 'Audio only', c: 'Printed books', d: 'In-person', correct: 'a' },
+    ];
+    qs.forEach((x, i) => {
+      db.prepare(
+        `INSERT INTO quiz_questions (quiz_id, question, option_a, option_b, option_c, option_d, correct, position)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(qinfo.lastInsertRowid, x.q, x.a, x.b, x.c, x.d, x.correct, i + 1);
+    });
+  }
+
+  // A couple of welcome announcements.
+  const annCount = db.prepare('SELECT COUNT(*) AS c FROM announcements').get().c;
+  if (annCount === 0) {
+    db.prepare("INSERT INTO announcements (user_id, title, body) VALUES (?, ?, ?)")
+      .run(adminId, 'Welcome to LearnHub 🎉', 'We\'re excited to have you here. Browse the catalog, enroll in a course, and start learning at your own pace.');
+    db.prepare("INSERT INTO announcements (user_id, title, body) VALUES (?, ?, ?)")
+      .run(adminId, 'New: quizzes & discussions', 'Lessons now include quizzes to test your knowledge and discussion threads to ask questions. Check them out in the lesson player!');
+  }
+
   console.log('Seed complete.');
   console.log('  Admin  → admin@learnhub.com / admin123');
   console.log('  Student→ student@learnhub.com / student123');

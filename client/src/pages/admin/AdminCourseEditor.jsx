@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api, thumbUrl } from '../../lib/api.js';
 import { useToast } from '../../components/toast.jsx';
+import QuizEditor from '../../components/QuizEditor.jsx';
 
 const CATEGORIES = [
   'Web Development', 'Data Science', 'Design', 'Business',
@@ -98,6 +99,7 @@ export default function AdminCourseEditor() {
   const [lessonFormFor, setLessonFormFor] = useState(null); // { moduleId } or { lesson } for edit
   const [editingModuleId, setEditingModuleId] = useState(null);
   const [moduleTitleDraft, setModuleTitleDraft] = useState('');
+  const [quizForLesson, setQuizForLesson] = useState(null); // lesson object
 
   const saveBtnRef = useRef(null);
 
@@ -298,7 +300,14 @@ export default function AdminCourseEditor() {
               )}
 
               {m.lessons.map((l) => (
-                lessonFormFor?.lesson?.id === l.id ? (
+                quizForLesson?.id === l.id ? (
+                  <QuizEditor
+                    key={`quiz-${l.id}`}
+                    lessonId={l.id}
+                    lessonTitle={l.title}
+                    onClose={() => setQuizForLesson(null)}
+                  />
+                ) : lessonFormFor?.lesson?.id === l.id ? (
                   <LessonForm key={l.id} lesson={l} onDone={refreshAfterLesson} onCancel={() => setLessonFormFor(null)} />
                 ) : (
                   <div className="lesson-edit" key={l.id}>
@@ -310,6 +319,7 @@ export default function AdminCourseEditor() {
                       </div>
                     </div>
                     <button className="btn btn-ghost btn-sm" onClick={() => setLessonFormFor({ lesson: l })}>Edit</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => setQuizForLesson(l)}>Quiz</button>
                     <button className="btn btn-danger btn-sm" onClick={() => deleteLesson(l)}>✕</button>
                   </div>
                 )

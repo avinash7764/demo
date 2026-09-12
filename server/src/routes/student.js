@@ -183,6 +183,95 @@ router.delete('/courses/:id/bookmark', (req, res) => {
   res.json({ bookmarked: false });
 });
 
+// ---------- quizzes ----------
+// Get a lesson's quiz (questions WITHOUT correct answers) + best result.
+router.get('/lessons/:id/quiz', (req, res) => {
+  const quiz = db.prepare('SELECT * FROM quizzes WHERE lesson_id = ?').get(req.params.id);
+  if (!quiz) return res.status(404).json({ error: 'No quiz for this lesson.' });
+  const questions = db
+    .prepare('SELECT id, question, option_a, option_b, option_c, option_d FROM quiz_questions WHERE quiz_id = ? ORDER BY position ASC, id ASC')
+    .all(quiz.id);
+  const best = db
+    .prepare('SELECT MAX(score) AS best, MAX(passed) AS passed FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?')
+    .get(req.user.id, quiz.id);
+  const attempts = db
+    .prepare('SELECT COUNT(*) AS c FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?')
+    .get(req.user.id, quiz.id).c;
+  res.json({ quiz, questions, best: best.best ?? null, passed: !!best.passed, attempts });
+});
+
+router.post('/lessons/:id/quiz/submit', (req, res) => {
+  const quiz = db.prepare('SELECT * FROM quizzes WHERE lesson_id = ?').get(req.params.id);
+  if (!quiz) return res.status(404).json({ error: 'No quiz for this lesson.' });
+  const questions = db
+    .prepare('SELECT * FROM quiz_questions WHERE quiz_id = ? ORDER BY position ASC, id ASC')
+    .all(quiz.id);
+  if (questions.length === 0) return res.status(400).json({ error: 'This quiz has no questions.' });
+  const answers = req.body?.answers || {};
+  let correctCount = 0;
+  const results = questions.map((q) => {
+    const chosen = answers[q.id] || null;
+    const isCorrect = chosen === q.correct;
+    if (isCorrect) correctCount++;
+    return { id: q.id, correct: q.correct, chosen, isCorrect };
+  });
+  const score = Math.round((correctCount / questions.length) * 100);
+  const passed = score >= quiz.pass_percent ? 1 : 0;
+  db.prepare('INSERT INTO quiz_attempts (user_id, quiz_id, score, passed) VALUES (?, ?, ?, ?)')
+    .run(req.user.id, quiz.id, score, passed);
+  res.json({ score, passed: !!passed, pass_percent: quiz.pass_percent, total: questions.length, correct: correctCount, results });
+});
+
+// ---------- discussions ----------
+router.get('/lessons/:id/discussions', (req, res) => {
+  const lesson = db.prepare('SELECT id FROM lessons WHERE id = ?').get(req.params.id);
+  if (!lesson) return res.status(404).json({ error: 'Lesson not found.' });
+  const rows = db
+    .prepare(
+      `SELECT d.id, d.body, d.parent_id, d.created_at, u.id AS user_id, u.name AS author, u.avatar
+       FROM discussions d JOIN users u ON u.id = d.user_id
+       WHERE d.lesson_id = ? ORDER BY d.created_at ASC`
+    )
+    .all(lesson.id);
+  const threads = [];
+  const replies = {};
+  for (const r of rows) {
+    if (!r.parent_id) threads.push(r);
+    else (replies[r.parent_id] ||= []).push(r);
+  }
+  res.json({ threads, replies });
+});
+
+router.post('/lessons/:id/discussions', (req, res) => {
+  const lesson = db.prepare('SELECT id FROM lessons WHERE id = ?').get(req.params.id);
+  if (!lesson) return res.status(404).json({ error: 'Lesson not found.' });
+  const { body, parent_id } = req.body || {};
+  if (!body || !String(body).trim()) return res.status(400).json({ error: 'Message cannot be empty.' });
+  const parent = parent_id
+    ? db.prepare('SELECT id FROM discussions WHERE id = ? AND lesson_id = ?').get(parent_id, lesson.id)
+    : null;
+  if (parent_id && !parent) return res.status(404).json({ error: 'Reply target not found.' });
+  const info = db
+    .prepare('INSERT INTO discussions (lesson_id, user_id, parent_id, body) VALUES (?, ?, ?, ?)')
+    .run(lesson.id, req.user.id, parent ? parent.id : null, String(body).trim().slice(0, 2000));
+  const created = db
+    .prepare('SELECT d.*, u.name AS author, u.avatar FROM discussions d JOIN users u ON u.id = d.user_id WHERE d.id = ?')
+    .get(info.lastInsertRowid);
+  res.status(201).json({ discussion: created });
+});
+
+// ---------- announcements ----------
+router.get('/announcements', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT a.id, a.title, a.body, a.created_at, u.name AS author
+       FROM announcements a JOIN users u ON u.id = a.user_id
+       ORDER BY a.created_at DESC LIMIT 20`
+    )
+    .all();
+  res.json({ announcements: rows });
+});
+
 // ---------- reviews ----------
 router.get('/courses/:id/review', (req, res) => {
   const review = db
