@@ -139,17 +139,17 @@ export default function CoursePlayer() {
               {fmt(active.duration_sec)} {active.description ? ` · ${active.description}` : ''}
             </div>
             <div className="actions">
-              <button className="btn btn-outline btn-sm" onClick={prevLesson} disabled={flatLessons.findIndex((l) => l.id === active.id) === 0} style={{ background: '#1a1827', borderColor: '#2a2740', color: '#e2e8f0' }}>
+              <button className="btn btn-outline btn-sm" onClick={prevLesson} disabled={flatLessons.findIndex((l) => l.id === active.id) === 0}>
                 ← Previous
               </button>
               <button className="btn btn-primary btn-sm" onClick={markComplete} disabled={active.completed}>
                 {active.completed ? '✓ Completed' : 'Mark complete'}
               </button>
-              <button className="btn btn-outline btn-sm" onClick={nextLesson} disabled={flatLessons.findIndex((l) => l.id === active.id) === flatLessons.length - 1} style={{ background: '#1a1827', borderColor: '#2a2740', color: '#e2e8f0' }}>
+              <button className="btn btn-outline btn-sm" onClick={nextLesson} disabled={flatLessons.findIndex((l) => l.id === active.id) === flatLessons.length - 1}>
                 Next →
               </button>
               {notesUrl && (
-                <a className="btn btn-outline btn-sm" href={notesUrl} target="_blank" rel="noreferrer" style={{ background: '#1a1827', borderColor: '#2a2740', color: '#e2e8f0' }}>
+                <a className="btn btn-outline btn-sm" href={notesUrl} target="_blank" rel="noreferrer">
                   📄 Download notes
                 </a>
               )}
@@ -157,7 +157,7 @@ export default function CoursePlayer() {
             {active.notes_path && (
               <div className="notes-box">
                 <strong>📝 Lecture notes</strong>
-                <p style={{ marginTop: 8, color: '#94a3b8' }}>
+                <p style={{ marginTop: 8, color: 'var(--text-muted)' }}>
                   Notes are available for this lesson. Use the “Download notes” button to save them.
                 </p>
               </div>

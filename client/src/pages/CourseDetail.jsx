@@ -165,12 +165,12 @@ export default function CourseDetail() {
               <span className="badge">{course.category}</span>
               <span className="badge">{course.total_lessons} lessons</span>
               {course.rating?.count > 0 && (
-                <span className="badge" style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}>
+                <span className="badge">
                   ★ {course.rating.average.toFixed(1)} ({course.rating.count})
                 </span>
               )}
             </div>
-            <p style={{ color: '#dbeafe', maxWidth: 560 }}>{course.description}</p>
+            <p style={{ color: 'var(--text-muted)', maxWidth: 560 }}>{course.description}</p>
           </div>
           <div className="enroll-panel">
             {thumb ? <img src={thumb} alt={course.title} style={{ borderRadius: 8, marginBottom: 16 }} /> : null}

@@ -19,13 +19,13 @@ export default function AdminLayout() {
         </nav>
         <div className="side-foot">
           <div style={{ fontSize: 13, marginBottom: 12 }}>
-            <div style={{ color: '#fff', fontWeight: 600 }}>{user?.name}</div>
+            <div style={{ color: 'var(--text)', fontWeight: 600 }}>{user?.name}</div>
             <div style={{ fontSize: 12 }}>{user?.email}</div>
           </div>
-          <Link to="/" className="btn btn-ghost btn-sm" style={{ color: '#cbd5e1' }}>← Back to site</Link>
+          <Link to="/" className="btn btn-ghost btn-sm">← Back to site</Link>
           <button
             className="btn btn-outline btn-sm"
-            style={{ borderColor: '#475569', color: '#e2e8f0', marginLeft: 8 }}
+            style={{ marginLeft: 8 }}
             onClick={() => { logout(); navigate('/login'); }}
           >
             Sign out

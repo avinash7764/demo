@@ -41,11 +41,11 @@ export default function Home() {
             all in one place. Unlock your potential with LearnHub.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="#courses" className="btn btn-lg" style={{ background: '#fff', color: '#1e1b4b' }}>
+            <a href="#courses" className="btn btn-lg btn-primary">
               Browse courses
             </a>
             {!user && (
-              <Link to="/register" className="btn btn-lg btn-outline" style={{ borderColor: '#7c86f5', color: '#fff' }}>
+              <Link to="/register" className="btn btn-lg btn-outline">
                 Get started free
               </Link>
             )}
