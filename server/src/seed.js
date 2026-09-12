@@ -236,6 +236,55 @@ export function run() {
     });
   });
 
+  // Fully complete the design course for the demo student so the
+  // certificate-of-completion feature is visible out of the box.
+  const designCourse = db.prepare("SELECT id FROM courses WHERE title = 'UI/UX Design Fundamentals'").get();
+  if (designCourse) {
+    const enrolled = db
+      .prepare('SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?')
+      .get(studentId, designCourse.id);
+    if (!enrolled) {
+      db.prepare('INSERT INTO enrollments (user_id, course_id, completed_at) VALUES (?, ?, datetime(\'now\'))')
+        .run(studentId, designCourse.id);
+    }
+    const designLessons = db
+      .prepare(
+        `SELECT l.id, l.duration_sec FROM lessons l
+         JOIN modules m ON m.id = l.module_id WHERE m.course_id = ?`
+      )
+      .all(designCourse.id);
+    designLessons.forEach((l) => {
+      const existing = db
+        .prepare('SELECT id FROM lesson_progress WHERE user_id = ? AND lesson_id = ?')
+        .get(studentId, l.id);
+      if (!existing) {
+        db.prepare(
+          'INSERT INTO lesson_progress (user_id, lesson_id, completed, watched_sec) VALUES (?, ?, 1, ?)'
+        ).run(studentId, l.id, l.duration_sec || 60);
+      }
+    });
+    db.prepare("UPDATE enrollments SET completed_at = COALESCE(completed_at, datetime('now')) WHERE user_id = ? AND course_id = ?")
+      .run(studentId, designCourse.id);
+  }
+
+  // A few demo reviews so the ratings section has life on first load.
+  const priyaId = db.prepare('SELECT id FROM users WHERE email = ?').get('priya@example.com')?.id;
+  const reviewSeeds = [
+    { userId: studentId, course: 'Full-Stack Web Development with JavaScript', rating: 5, comment: 'Excellent, hands-on course. The projects made the concepts click for me.' },
+    { userId: priyaId, course: 'Full-Stack Web Development with JavaScript', rating: 4, comment: 'Really clear explanations. Would love a section on testing.' },
+    { userId: studentId, course: 'UI/UX Design Fundamentals', rating: 5, comment: 'Beautifully structured. My portfolio case study came straight from this.' },
+    { userId: priyaId, course: 'Data Science & Machine Learning with Python', rating: 5, comment: 'Perfect bridge from Python basics to real ML workflows.' },
+  ];
+  for (const s of reviewSeeds) {
+    if (!s.userId) continue;
+    const courseId = db.prepare('SELECT id FROM courses WHERE title = ?').get(s.course)?.id;
+    if (!courseId) continue;
+    const existing = db.prepare('SELECT id FROM reviews WHERE user_id = ? AND course_id = ?').get(s.userId, courseId);
+    if (existing) continue;
+    db.prepare('INSERT INTO reviews (user_id, course_id, rating, comment) VALUES (?, ?, ?, ?)')
+      .run(s.userId, courseId, s.rating, s.comment);
+  }
+
   console.log('Seed complete.');
   console.log('  Admin  → admin@learnhub.com / admin123');
   console.log('  Student→ student@learnhub.com / student123');

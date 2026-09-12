@@ -18,14 +18,21 @@ export default function Dashboard() {
 
   const totalLessons = courses.reduce((n, c) => n + (c.lesson_count || 0), 0);
   const completed = courses.reduce((n, c) => n + Math.round(((c.progress || 0) / 100) * (c.lesson_count || 0)), 0);
+  const inProgress = courses.filter((c) => c.progress > 0 && c.progress < 100);
+  const doneCourses = courses.filter((c) => c.progress >= 100);
 
   return (
     <div className="container">
       <div className="dash-head">
-        <h1>My Learning</h1>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Welcome back, {user?.name}. You're enrolled in {courses.length} course{courses.length === 1 ? '' : 's'}.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h1>My Learning</h1>
+            <p style={{ color: 'var(--text-muted)' }}>
+              Welcome back, {user?.name}. You're enrolled in {courses.length} course{courses.length === 1 ? '' : 's'}.
+            </p>
+          </div>
+          <Link to="/profile" className="btn btn-outline btn-sm">👤 My profile</Link>
+        </div>
       </div>
 
       <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
@@ -41,8 +48,33 @@ export default function Dashboard() {
           <div className="val">{completed}</div>
           <div className="label">Lessons completed</div>
         </div>
+        <div className="card stat-card">
+          <div className="val">{doneCourses.length}</div>
+          <div className="label">Certificates earned</div>
+        </div>
       </div>
 
+      {!loading && inProgress.length > 0 && (
+        <>
+          <div className="section-title"><h2>Continue learning</h2></div>
+          <div className="resume-strip">
+            {inProgress.map((c) => (
+              <Link to={`/learn/${c.id}`} className="card resume-card" key={c.id}>
+                <div className="r-title">{c.title}</div>
+                {c.last_lesson && (
+                  <div className="r-lesson">
+                    Resume: {c.last_lesson.module_title} · {c.last_lesson.title}
+                  </div>
+                )}
+                <div className="progress"><span style={{ width: `${c.progress}%` }} /></div>
+                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{c.progress}% complete</div>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="section-title"><h2>My courses</h2></div>
       {loading ? (
         <div className="page-loading"><div className="spinner" /></div>
       ) : courses.length === 0 ? (

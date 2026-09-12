@@ -1,18 +1,58 @@
 import { Router } from 'express';
+import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
-import { db, courseProgressFor } from '../db.js';
+import crypto from 'node:crypto';
+import { db, courseProgressFor, lastWatchedLesson } from '../db.js';
 import { authRequired } from '../auth.js';
 import { streamVideo, UPLOAD_DIR, mimeFor } from '../stream.js';
 
 const router = Router();
 router.use(authRequired);
 
-// A student's enrolled courses with progress.
+// ---------- profile ----------
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(UPLOAD_DIR, 'avatars');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `avatar-${req.user.id}-${crypto.randomBytes(4).toString('hex')}${ext}`);
+  },
+});
+const avatarUpload = multer({ storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+router.get('/profile', (req, res) => {
+  const stats = {
+    enrolled: db.prepare('SELECT COUNT(*) AS c FROM enrollments WHERE user_id = ?').get(req.user.id).c,
+    completed: db
+      .prepare('SELECT COUNT(*) AS c FROM enrollments WHERE user_id = ? AND completed_at IS NOT NULL')
+      .get(req.user.id).c,
+    lessonsDone: db
+      .prepare('SELECT COUNT(*) AS c FROM lesson_progress WHERE user_id = ? AND completed = 1')
+      .get(req.user.id).c,
+  };
+  res.json({ user: req.user, stats });
+});
+
+router.put('/profile', avatarUpload.single('avatar'), (req, res) => {
+  const { name } = req.body || {};
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const avatar = req.file ? `avatars/${req.file.filename}` : user.avatar;
+  const newName = (name?.trim() || user.name).slice(0, 80);
+  db.prepare('UPDATE users SET name = ?, avatar = ? WHERE id = ?').run(newName, avatar, user.id);
+  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  const { password_hash, ...rest } = updated;
+  res.json({ user: rest });
+});
+
+// A student's enrolled courses with progress + resume info.
 router.get('/my-courses', (req, res) => {
   const rows = db
     .prepare(
-      `SELECT e.id AS enrollment_id, e.enrolled_at, c.*,
+      `SELECT e.id AS enrollment_id, e.enrolled_at, e.completed_at, c.*,
         (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = c.id) AS lesson_count
        FROM enrollments e
        JOIN courses c ON c.id = e.course_id
@@ -23,6 +63,7 @@ router.get('/my-courses', (req, res) => {
   const courses = rows.map((c) => ({
     ...c,
     progress: courseProgressFor(req.user.id, c.id),
+    last_lesson: lastWatchedLesson(req.user.id, c.id),
   }));
   res.json({ courses });
 });
@@ -77,7 +118,16 @@ router.post('/lessons/:id/progress', (req, res) => {
       'SELECT m.course_id FROM lessons l JOIN modules m ON m.id = l.module_id WHERE l.id = ?'
     )
     .get(lesson.id).course_id;
-  res.json({ progress: courseProgressFor(req.user.id, courseId), completed: done === 1 });
+  const progress = courseProgressFor(req.user.id, courseId);
+
+  // Stamp the completion date the first time the course reaches 100%.
+  if (progress >= 100) {
+    db.prepare(
+      `UPDATE enrollments SET completed_at = COALESCE(completed_at, datetime('now'))
+       WHERE user_id = ? AND course_id = ?`
+    ).run(req.user.id, courseId);
+  }
+  res.json({ progress, completed: done === 1 });
 });
 
 // Stream a lesson video (Range support).
@@ -98,6 +148,45 @@ router.get('/lessons/:id/stream', (req, res) => {
   if (!lesson.video_path) return res.status(404).json({ error: 'No video for this lesson.' });
   const filePath = path.resolve(UPLOAD_DIR, lesson.video_path);
   streamVideo(filePath, req, res);
+});
+
+// ---------- reviews ----------
+router.get('/courses/:id/review', (req, res) => {
+  const review = db
+    .prepare('SELECT * FROM reviews WHERE user_id = ? AND course_id = ?')
+    .get(req.user.id, req.params.id);
+  res.json({ review: review || null });
+});
+
+router.post('/courses/:id/review', (req, res) => {
+  const course = db.prepare('SELECT id FROM courses WHERE id = ?').get(req.params.id);
+  if (!course) return res.status(404).json({ error: 'Course not found.' });
+  const enrolled = db
+    .prepare('SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?')
+    .get(req.user.id, course.id);
+  if (!enrolled) {
+    return res.status(403).json({ error: 'Enroll in this course to leave a review.' });
+  }
+  const { rating, comment = '' } = req.body || {};
+  const r = Math.min(5, Math.max(1, parseInt(rating, 10) || 5));
+  const existing = db
+    .prepare('SELECT id FROM reviews WHERE user_id = ? AND course_id = ?')
+    .get(req.user.id, course.id);
+  if (existing) {
+    db.prepare('UPDATE reviews SET rating = ?, comment = ? WHERE id = ?').run(r, String(comment).slice(0, 2000), existing.id);
+  } else {
+    db.prepare('INSERT INTO reviews (user_id, course_id, rating, comment) VALUES (?, ?, ?, ?)')
+      .run(req.user.id, course.id, r, String(comment).slice(0, 2000));
+  }
+  const review = db
+    .prepare('SELECT * FROM reviews WHERE user_id = ? AND course_id = ?')
+    .get(req.user.id, course.id);
+  res.json({ review });
+});
+
+router.delete('/courses/:id/review', (req, res) => {
+  db.prepare('DELETE FROM reviews WHERE user_id = ? AND course_id = ?').run(req.user.id, req.params.id);
+  res.json({ ok: true });
 });
 
 // Download lesson notes.

@@ -59,10 +59,21 @@ CREATE TABLE IF NOT EXISTS lessons (
 );
 
 CREATE TABLE IF NOT EXISTS enrollments (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  course_id    INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  enrolled_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  completed_at TEXT,
+  UNIQUE(user_id, course_id)
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   course_id  INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-  enrolled_at TEXT NOT NULL DEFAULT (datetime('now')),
+  rating     INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+  comment    TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(user_id, course_id)
 );
 
@@ -76,6 +87,15 @@ CREATE TABLE IF NOT EXISTS lesson_progress (
   UNIQUE(user_id, lesson_id)
 );
 `);
+
+// ---------- lightweight migrations ----------
+function columnExists(table, column) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  return cols.some((c) => c.name === column);
+}
+if (!columnExists('enrollments', 'completed_at')) {
+  db.exec(`ALTER TABLE enrollments ADD COLUMN completed_at TEXT;`);
+}
 
 // ---------- helper row mappers ----------
 export function rowToUser(r) {
@@ -120,4 +140,28 @@ export function courseProgressFor(userId, courseId) {
     )
     .get(userId, courseId).c;
   return Math.round((done / lessons.length) * 100);
+}
+
+// The most recently-watched lesson in a course (for "continue learning").
+export function lastWatchedLesson(userId, courseId) {
+  const row = db
+    .prepare(
+      `SELECT l.id, l.title, m.title AS module_title
+       FROM lesson_progress lp
+       JOIN lessons l ON l.id = lp.lesson_id
+       JOIN modules m ON m.id = l.module_id
+       WHERE lp.user_id = ? AND m.course_id = ?
+       ORDER BY lp.updated_at DESC
+       LIMIT 1`
+    )
+    .get(userId, courseId);
+  return row || null;
+}
+
+// Average rating + review count for a course.
+export function courseRating(courseId) {
+  const r = db
+    .prepare('SELECT AVG(rating) AS avg, COUNT(*) AS c FROM reviews WHERE course_id = ?')
+    .get(courseId);
+  return { average: r.avg ? Math.round(r.avg * 10) / 10 : 0, count: r.c };
 }

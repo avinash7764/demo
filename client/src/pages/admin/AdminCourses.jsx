@@ -7,11 +7,13 @@ export default function AdminCourses() {
   const { toast } = useToast();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
 
   function load() {
-    api('/admin/courses').then((d) => setCourses(d.courses)).catch(() => {}).finally(() => setLoading(false));
+    api(`/admin/courses${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+      .then((d) => setCourses(d.courses)).catch(() => {}).finally(() => setLoading(false));
   }
-  useEffect(load, []);
+  useEffect(load, [q]);
 
   async function remove(c) {
     if (!confirm(`Delete "${c.title}"? This removes all its lessons, videos and notes.`)) return;
@@ -29,6 +31,13 @@ export default function AdminCourses() {
       <div className="page-head">
         <h1>Courses</h1>
         <Link to="/admin/courses/new" className="btn btn-primary">+ New course</Link>
+      </div>
+
+      <div className="toolbar" style={{ margin: '0 0 20px' }}>
+        <div className="search-input">
+          <span className="icon">🔍</span>
+          <input placeholder="Search courses…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
       </div>
 
       {loading ? (

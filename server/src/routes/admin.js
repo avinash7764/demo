@@ -44,14 +44,22 @@ router.get('/stats', (req, res) => {
 
 // ---------- courses ----------
 router.get('/courses', (req, res) => {
+  const { q } = req.query;
+  const params = [];
+  let where = '';
+  if (q) {
+    where = 'WHERE c.title LIKE ? OR c.instructor LIKE ? OR c.category LIKE ?';
+    const like = `%${q}%`;
+    params.push(like, like, like);
+  }
   const rows = db
     .prepare(
       `SELECT c.*,
         (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = c.id) AS lesson_count,
         (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count
-       FROM courses c ORDER BY c.created_at DESC`
+       FROM courses c ${where} ORDER BY c.created_at DESC`
     )
-    .all();
+    .all(...params);
   res.json({ courses: rows });
 });
 
@@ -239,13 +247,21 @@ router.put('/courses/:id/reorder', (req, res) => {
 
 // ---------- students ----------
 router.get('/students', (req, res) => {
+  const { q } = req.query;
+  const params = ["student"];
+  let where = "WHERE u.role = ?";
+  if (q) {
+    where += ' AND (u.name LIKE ? OR u.email LIKE ?)';
+    const like = `%${q}%`;
+    params.push(like, like);
+  }
   const rows = db
     .prepare(
       `SELECT u.id, u.name, u.email, u.role, u.created_at,
         (SELECT COUNT(*) FROM enrollments e WHERE e.user_id = u.id) AS course_count
-       FROM users u WHERE u.role = 'student' ORDER BY u.created_at DESC`
+       FROM users u ${where} ORDER BY u.created_at DESC`
     )
-    .all();
+    .all(...params);
   res.json({ students: rows });
 });
 

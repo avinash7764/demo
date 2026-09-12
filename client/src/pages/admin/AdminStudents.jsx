@@ -7,11 +7,13 @@ export default function AdminStudents() {
   const { toast } = useToast();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
 
   function load() {
-    api('/admin/students').then((d) => setStudents(d.students)).catch(() => {}).finally(() => setLoading(false));
+    api(`/admin/students${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+      .then((d) => setStudents(d.students)).catch(() => {}).finally(() => setLoading(false));
   }
-  useEffect(load, []);
+  useEffect(load, [q]);
 
   async function remove(s) {
     if (!confirm(`Delete ${s.name}'s account and all their progress?`)) return;
@@ -26,6 +28,13 @@ export default function AdminStudents() {
     <>
       <div className="page-head">
         <h1>Students</h1>
+      </div>
+
+      <div className="toolbar" style={{ margin: '0 0 20px' }}>
+        <div className="search-input">
+          <span className="icon">🔍</span>
+          <input placeholder="Search by name or email…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
       </div>
 
       {loading ? (

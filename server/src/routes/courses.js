@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db, courseProgressFor } from '../db.js';
+import { db, courseProgressFor, courseRating } from '../db.js';
 import { optionalAuth } from '../auth.js';
 
 const router = Router();
@@ -35,25 +35,49 @@ export function fullCourse(id, userId) {
     return { ...m, lessons };
   });
   course.total_lessons = totalLessons;
-  course.enrolled = userId
-    ? !!db.prepare('SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?').get(userId, id)
-    : false;
+  const enrollment = userId
+    ? db.prepare('SELECT completed_at FROM enrollments WHERE user_id = ? AND course_id = ?').get(userId, id)
+    : null;
+  course.enrolled = !!enrollment;
+  course.completed_at = enrollment?.completed_at || null;
   course.progress = userId ? courseProgressFor(userId, id) : 0;
+  course.rating = courseRating(id);
   return course;
 }
 
-// Public catalog listing.
+// Public catalog listing with optional search & filters.
 router.get('/', (req, res) => {
+  const { q, category, level, free } = req.query;
+  const clauses = ['c.published = 1'];
+  const params = [];
+  if (q) {
+    clauses.push('(c.title LIKE ? OR c.description LIKE ? OR c.instructor LIKE ?)');
+    const like = `%${q}%`;
+    params.push(like, like, like);
+  }
+  if (category && category !== 'all') {
+    clauses.push('c.category = ?');
+    params.push(category);
+  }
+  if (level && level !== 'all') {
+    clauses.push('c.level = ?');
+    params.push(level);
+  }
+  if (free === '1') clauses.push('c.is_free = 1');
+  if (free === '0') clauses.push('c.is_free = 0');
+
   const rows = db
     .prepare(
       `SELECT c.*,
         (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = c.id) AS lesson_count,
-        (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count
+        (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
+        (SELECT AVG(rating) FROM reviews r WHERE r.course_id = c.id) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews r WHERE r.course_id = c.id) AS review_count
        FROM courses c
-       WHERE c.published = 1
+       WHERE ${clauses.join(' AND ')}
        ORDER BY c.created_at DESC`
     )
-    .all();
+    .all(...params);
   res.json({ courses: rows });
 });
 
@@ -64,6 +88,19 @@ router.get('/:id', optionalAuth, (req, res) => {
     return res.status(404).json({ error: 'Course not found.' });
   }
   res.json({ course });
+});
+
+// Public list of reviews for a course.
+router.get('/:id/reviews', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT r.id, r.rating, r.comment, r.created_at, u.name AS author, u.avatar
+       FROM reviews r JOIN users u ON u.id = r.user_id
+       WHERE r.course_id = ?
+       ORDER BY r.created_at DESC`
+    )
+    .all(req.params.id);
+  res.json({ reviews: rows });
 });
 
 export default router;

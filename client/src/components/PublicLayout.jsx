@@ -20,7 +20,7 @@ export default function PublicLayout() {
           <div className="nav-right">
             {user ? (
               <>
-                <Link to="/dashboard" className="avatar" title={user.name}>
+                <Link to="/profile" className="avatar" title={user.name}>
                   {user.name?.[0]?.toUpperCase() || 'U'}
                 </Link>
                 <button

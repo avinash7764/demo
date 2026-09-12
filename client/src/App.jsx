@@ -9,6 +9,8 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import CoursePlayer from './pages/CoursePlayer.jsx';
+import Profile from './pages/Profile.jsx';
+import Certificate from './pages/Certificate.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminCourses from './pages/admin/AdminCourses.jsx';
 import AdminCourseEditor from './pages/admin/AdminCourseEditor.jsx';
@@ -65,6 +67,26 @@ export default function App() {
           </RequireAuth>
         }
       />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <PublicLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<Profile />} />
+      </Route>
+      <Route
+        path="/certificate/:id"
+        element={
+          <RequireAuth>
+            <PublicLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<Certificate />} />
+      </Route>
 
       {/* Admin */}
       <Route

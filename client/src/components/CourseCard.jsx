@@ -31,6 +31,16 @@ export default function CourseCard({ course, progress }) {
         <div className="course-instructor">
           {course.instructor} · {course.lesson_count ?? 0} lessons
         </div>
+        {typeof course.avg_rating === 'number' && course.avg_rating > 0 && (
+          <div className="rating-row">
+            <span className="stars">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span key={n} className={n <= Math.round(course.avg_rating) ? '' : 'off'}>★</span>
+              ))}
+            </span>
+            <span>{course.avg_rating.toFixed(1)} ({course.review_count ?? 0})</span>
+          </div>
+        )}
         {typeof progress === 'number' && progress > 0 && (
           <div>
             <div className="p-row" style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>
